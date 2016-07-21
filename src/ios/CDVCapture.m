@@ -191,7 +191,7 @@
     NSString* filePath;
     int i = 1;
     do {
-        filePath = [NSString stringWithFormat:@"%@/photo_%03d.jpg", docsPath, i++];
+        filePath = [NSString stringWithFormat:@"%@/photo_%05d.jpg", docsPath, i++];
     } while ([fileMgr fileExistsAtPath:filePath]);
 
     if (![data writeToFile:filePath options:NSAtomicWrite error:&err]) {
@@ -754,7 +754,7 @@
     NSString* filePath;
     int i = 1;
     do {
-        filePath = [NSString stringWithFormat:@"%@/audio_%03d.wav", docsPath, i++];
+        filePath = [NSString stringWithFormat:@"%@/audio_%05d.wav", docsPath, i++];
     } while ([fileMgr fileExistsAtPath:filePath]);
 
     NSURL* fileURL = [NSURL fileURLWithPath:filePath isDirectory:NO];
