@@ -185,7 +185,7 @@
     CDVPluginResult* result = nil;
 
     // save the image to photo album
-    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+    // UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
 
     NSData* data = nil;
     if (mimeType && [mimeType isEqualToString:@"image/png"]) {
@@ -194,8 +194,11 @@
         data = UIImageJPEGRepresentation(image, 0.96);
     }
 
-    // write to temp directory and return URI
-    NSString* docsPath = [NSTemporaryDirectory()stringByStandardizingPath];   // use file system temporary directory
+    // write to application directory and return URI
+    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString* docsPath = ([paths count] > 0)
+        ? [paths objectAtIndex:0]
+        : nil;
     NSError* err = nil;
     NSFileManager* fileMgr = [[NSFileManager alloc] init];
 
@@ -305,8 +308,30 @@
         UISaveVideoAtPathToSavedPhotosAlbum(moviePath, nil, nil, nil);
         NSLog(@"finished saving movie");
     }*/
+
+    // write to application directory and return URI
+    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString* docsPath = ([paths count] > 0)
+        ? [paths objectAtIndex:0]
+        : nil;
+    NSFileManager* fileMgr = [[NSFileManager alloc] init];
+
+    // generate unique file name
+    NSString* filePath;
+    int i = 1;
+    do {
+        filePath = [NSString stringWithFormat:@"%@/video_%05d.mp4", docsPath, i++];
+    } while ([fileMgr fileExistsAtPath:filePath]);
+
+    NSError *error = nil ;
+    BOOL res = [[NSFileManager defaultManager] copyItemAtPath:moviePath toPath:filePath error:&error];
+    if (!res) {
+        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
+        return pluginResult;
+    }
+
     // create MediaFile object
-    NSDictionary* fileDict = [self getMediaDictionaryFromPath:moviePath ofType:nil];
+    NSDictionary* fileDict = [self getMediaDictionaryFromPath:filePath ofType:nil];
     NSArray* fileArray = [NSArray arrayWithObject:fileDict];
 
     return [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
@@ -761,9 +786,11 @@
         }
     }
 
-    // create file to record to in temporary dir
-
-    NSString* docsPath = [NSTemporaryDirectory()stringByStandardizingPath];   // use file system temporary directory
+    // create file to record to
+    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString* docsPath = ([paths count] > 0)
+        ? [paths objectAtIndex:0]
+        : nil;
     NSError* err = nil;
     NSFileManager* fileMgr = [[NSFileManager alloc] init];
 

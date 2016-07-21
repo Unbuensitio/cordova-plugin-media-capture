@@ -235,6 +235,17 @@ public class Capture extends CordovaPlugin {
       }
     }
 
+    private String getAppDirectoryPath() {
+        File filesDir = null;
+
+        // Use internal storage
+        filesDir = cordova.getActivity().getApplicationContext().getFilesDir();
+
+        // Create the cache directory if it doesn't exist
+        filesDir.mkdirs();
+        return filesDir.getAbsolutePath();
+    }
+
     private String getTempDirectoryPath() {
         File cache = null;
 
@@ -401,7 +412,7 @@ public class Capture extends CordovaPlugin {
         }
 
         if( data == null){
-            File movie = new File(getTempDirectoryPath(), "Capture.avi");
+            File movie = new File(getAppDirectoryPath(), "Capture.avi");
             data = Uri.fromFile(movie);
         }
 
