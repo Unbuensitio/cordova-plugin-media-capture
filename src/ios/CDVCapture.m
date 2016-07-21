@@ -178,7 +178,7 @@
     if (mimeType && [mimeType isEqualToString:@"image/png"]) {
         data = UIImagePNGRepresentation(image);
     } else {
-        data = UIImageJPEGRepresentation(image, 0.5);
+        data = UIImageJPEGRepresentation(image, 0.96);
     }
 
     // write to temp directory and return URI
