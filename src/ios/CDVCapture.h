@@ -49,9 +49,11 @@ typedef NSUInteger CDVCaptureError;
     CDVImagePicker* pickerController;
     BOOL inUse;
     BOOL isAnimated;
+    CGFloat jpegCompression;
 }
 @property BOOL inUse;
 @property BOOL isAnimated;
+@property CGFloat jpegCompression;
 - (void)captureAudio:(CDVInvokedUrlCommand*)command;
 - (void)captureImage:(CDVInvokedUrlCommand*)command;
 - (CDVPluginResult*)processImage:(UIImage*)image type:(NSString*)mimeType forCallbackId:(NSString*)callbackId;

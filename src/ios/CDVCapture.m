@@ -77,11 +77,13 @@
 @implementation CDVCapture
 @synthesize inUse;
 @synthesize isAnimated;
+@synthesize jpegCompression;
 
 - (void)pluginInitialize
 {
     self.inUse = NO;
     self.isAnimated = YES;
+    self.jpegCompression = 0.5;
 }
 
 - (void)captureAudio:(CDVInvokedUrlCommand*)command
@@ -136,12 +138,20 @@
         options = [NSDictionary dictionary];
     }
 
-    // options could contain limit and mode neither of which are supported at this time
+    // options could contain animated, limit, mode and quality
     // taking more than one picture (limit) is only supported if provide own controls via cameraOverlayView property
     // can support mode in OS
     NSNumber* animated = [options objectForKey:@"animated"];
     if (animated) {
         self.isAnimated = [animated boolValue];
+    }
+
+    NSNumber* quality = [options objectForKey:@"quality"];
+    if (quality) {
+        CGFloat qualityValue = [quality floatValue];
+        if (qualityValue >= 0 && qualityValue <= 1) {
+            self.jpegCompression = qualityValue;
+        }
     }
 
     if (![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
@@ -190,7 +200,7 @@
     if (mimeType && [mimeType isEqualToString:@"image/png"]) {
         data = UIImagePNGRepresentation(image);
     } else {
-        data = UIImageJPEGRepresentation(image, 0.96);
+        data = UIImageJPEGRepresentation(image, self.jpegCompression);
     }
 
     // write to application directory
@@ -234,7 +244,7 @@
         options = [NSDictionary dictionary];
     }
 
-    // options could contain duration, limit, mode and quality
+    // options could contain animated, duration, limit, mode and quality
     // taking more than one video (limit) is only supported if provide own controls via cameraOverlayView property
     NSNumber* animated = [options objectForKey:@"animated"];
     if (animated) {
