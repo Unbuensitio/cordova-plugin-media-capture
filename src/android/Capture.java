@@ -20,6 +20,7 @@ package org.apache.cordova.mediacapture;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -385,36 +386,17 @@ public class Capture extends CordovaPlugin {
         try {
             // Create entry in media store for image
             // (Don't use insertImage() because it uses default compression setting of 50 - no way to change it)
-            ContentValues values = new ContentValues();
-            values.put(android.provider.MediaStore.Images.Media.MIME_TYPE, IMAGE_JPEG);
-            Uri uri = null;
-            try {
-                uri = this.cordova.getActivity().getContentResolver().insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-            } catch (UnsupportedOperationException e) {
-                LOG.d(LOG_TAG, "Can't write to external media storage.");
-                try {
-                    uri = this.cordova.getActivity().getContentResolver().insert(android.provider.MediaStore.Images.Media.INTERNAL_CONTENT_URI, values);
-                } catch (UnsupportedOperationException ex) {
-                    LOG.d(LOG_TAG, "Can't write to internal media storage.");
-                    pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error capturing image - no media storage found."));
-                    return;
-                }
+            File inputFile = new File(getTempDirectoryPath() + "/Capture.jpg");
+            File outputFile = getWritableFile("jpg");
+
+            if(!moveFile(inputFile, outputFile)) {
+                throw new IOException("Error copying images");
             }
-            FileInputStream fis = new FileInputStream(getTempDirectoryPath() + "/Capture.jpg");
-            OutputStream os = this.cordova.getActivity().getContentResolver().openOutputStream(uri);
-            byte[] buffer = new byte[4096];
-            int len;
-            while ((len = fis.read(buffer)) != -1) {
-                os.write(buffer, 0, len);
-            }
-            os.flush();
-            os.close();
-            fis.close();
 
             // Add image to results
-            req.results.put(createMediaFile(uri));
+            req.results.put(createMediaFile(Uri.fromFile(outputFile)));
 
-            checkForDuplicateImage();
+            //checkForDuplicateImage();
 
             if (req.results.length() >= req.limit) {
                 // Send Uri back to JavaScript for viewing image
@@ -430,24 +412,23 @@ public class Capture extends CordovaPlugin {
     }
 
     public void onVideoActivityResult(Request req, Intent intent) {
-        Uri data = null;
+        Uri data = intent.getData();
 
-        if (intent != null){
-            // Get the uri of the video clip
-            data = intent.getData();
-        }
-
-        if( data == null){
-            File movie = new File(getTempDirectoryPath(), "Capture.avi");
-            data = Uri.fromFile(movie);
-        }
-
-        // create a file object from the uri
-        if(data == null) {
+        if (data == null) {
             pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Error: data is null"));
+            return;
         }
-        else {
-            req.results.put(createMediaFile(data));
+
+        try {
+            File inputFile = webView.getResourceApi().mapUriToFile(data);
+            File outputFile = getWritableFile("mp4");
+
+            if(!moveFile(inputFile, outputFile)) {
+                throw new IOException("Unable to move video file");
+            }
+
+            // create a file object from the uri
+            req.results.put(createMediaFile(Uri.fromFile(outputFile)));
 
             if (req.results.length() >= req.limit) {
                 // Send Uri back to JavaScript for viewing video
@@ -456,7 +437,46 @@ public class Capture extends CordovaPlugin {
                 // still need to capture more video clips
                 captureVideo(req);
             }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error capturing video."));
         }
+    }
+
+    private boolean moveFile(File inputFile, File outputFile) {
+        // if it's on the same mount, then simple rename.
+        if (inputFile.renameTo(outputFile)) {
+            return true;
+        }
+
+        // otherwise copy using input output streams
+        FileInputStream fis = null;
+        OutputStream os = null;
+        try {
+            byte[] buffer = new byte[4096];
+            fis = new FileInputStream(inputFile);
+            os = this.cordova.getActivity().getContentResolver().openOutputStream(Uri.fromFile(outputFile));
+            int len;
+            while ((len = fis.read(buffer)) != -1) {
+                os.write(buffer, 0, len);
+            }
+            os.flush();
+            inputFile.delete();
+        } catch (IOException e) {
+            return false;
+       } finally {
+            try {
+                if (os != null)
+                    os.close();
+
+                if (fis != null)
+                    fis.close();
+            } catch (Exception e){
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -609,6 +629,22 @@ public class Capture extends CordovaPlugin {
         }
     }
 
+    private File getWritableFile(String ext) {
+        int i = 1;
+        File dataDirectory = cordova.getActivity().getApplicationContext().getFilesDir();
+
+        // Create the data directory if it doesn't exist
+        dataDirectory.mkdirs();
+        String dataPath = dataDirectory.getAbsolutePath();
+        File file;
+        do {
+            file = new File(dataPath + String.format("/capture_%05d." + ext, i));
+            i++;
+        } while (file.exists());
+
+        return file;
+    }
+
     public Bundle onSaveInstanceState() {
         return pendingRequests.toBundle();
     }
@@ -617,3 +653,4 @@ public class Capture extends CordovaPlugin {
         pendingRequests.setLastSavedState(state, callbackContext);
     }
 }
+
