@@ -629,12 +629,15 @@ public class Capture extends CordovaPlugin {
         }
     }
 
-     private File getWritableFile(String ext) {
+	private File getWritableFile(String ext) 
+	{
         int i = 1;
-        String state = Environment.getExternalStorageState();
-        File dataDirectory = Environment.MEDIA_MOUNTED.equals(state)
-            ? cordova.getActivity().getApplicationContext().getExternalFilesDir(null)
-            : cordova.getActivity().getApplicationContext().getFilesDir();
+        File dataDirectory = cordova.getActivity().getApplicationContext().getFilesDir();
+
+         //hack for galaxy camera 2.
+         if (Build.MODEL.equals("EK-GC200") && Build.MANUFACTURER.equals("samsung") && new File("/storage/extSdCard/").canRead()) {
+             dataDirectory = new File("/storage/extSdCard/.com.buzzcard.brandingtool/");
+         }
 
         // Create the data directory if it doesn't exist
         dataDirectory.mkdirs();
@@ -646,7 +649,7 @@ public class Capture extends CordovaPlugin {
         } while (file.exists());
 
         return file;
-    }
+	}
 
     public Bundle onSaveInstanceState() {
         return pendingRequests.toBundle();
