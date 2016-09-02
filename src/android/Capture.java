@@ -629,9 +629,12 @@ public class Capture extends CordovaPlugin {
         }
     }
 
-    private File getWritableFile(String ext) {
+     private File getWritableFile(String ext) {
         int i = 1;
-        File dataDirectory = cordova.getActivity().getApplicationContext().getFilesDir();
+        String state = Environment.getExternalStorageState();
+        File dataDirectory = Environment.MEDIA_MOUNTED.equals(state)
+            ? cordova.getActivity().getApplicationContext().getExternalFilesDir(null)
+            : cordova.getActivity().getApplicationContext().getFilesDir();
 
         // Create the data directory if it doesn't exist
         dataDirectory.mkdirs();
