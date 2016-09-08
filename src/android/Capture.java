@@ -20,7 +20,6 @@ package org.apache.cordova.mediacapture;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -45,7 +44,6 @@ import org.json.JSONObject;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -67,6 +65,7 @@ public class Capture extends CordovaPlugin {
     private static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
     private static final int CAPTURE_IMAGE = 1;     // Constant for capture image
     private static final int CAPTURE_VIDEO = 2;     // Constant for capture video
+    private static final int CAPTURE_MULTIPLE_IMAGES = 3;  // constant for capturing multple images in one session. ATM only relevant on Galaxy Camera 2
     private static final String LOG_TAG = "Capture";
 
     private static final int CAPTURE_INTERNAL_ERR = 0;
@@ -80,6 +79,8 @@ public class Capture extends CordovaPlugin {
     private final PendingRequests pendingRequests = new PendingRequests();
 
     private int numPics;                            // Number of pictures before capture activity
+
+    private long multipleImagesStartTime;
 
 //    public void setContext(Context mCtx)
 //    {
@@ -130,7 +131,11 @@ public class Capture extends CordovaPlugin {
             this.captureAudio(pendingRequests.createRequest(CAPTURE_AUDIO, options, callbackContext));
         }
         else if (action.equals("captureImage")) {
-            this.captureImage(pendingRequests.createRequest(CAPTURE_IMAGE, options, callbackContext));
+            if (Build.MODEL.equals("EK-GC200") && Build.MANUFACTURER.equals("samsung") && isPackageInstalled("net.sourceforge.opencamera")) {
+                this.captureMultipleImages(pendingRequests.createRequest(CAPTURE_MULTIPLE_IMAGES, options, callbackContext));
+            } else {
+                this.captureImage(pendingRequests.createRequest(CAPTURE_IMAGE, options, callbackContext));
+            }
         }
         else if (action.equals("captureVideo")) {
             this.captureVideo(pendingRequests.createRequest(CAPTURE_VIDEO, options, callbackContext));
@@ -181,7 +186,7 @@ public class Capture extends CordovaPlugin {
     /**
      * Get the Image specific attributes
      *
-     * @param filePath path to the file
+     * @param fileUrl path to the file
      * @param obj represents the Media File Data
      * @return a JSONObject that represents the Media File Data
      * @throws JSONException
@@ -244,15 +249,12 @@ public class Capture extends CordovaPlugin {
         return cache.getAbsolutePath();
     }
 
-    /**
-     * Sets up an intent to capture images.  Result handled by onActivityResult()
-     */
     private void captureImage(Request req) {
         boolean needExternalStoragePermission =
-            !PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+                !PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
 
         boolean needCameraPermission = cameraPermissionInManifest &&
-            !PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
+                !PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
 
         if (needExternalStoragePermission || needCameraPermission) {
             if (needExternalStoragePermission && needCameraPermission) {
@@ -277,8 +279,42 @@ public class Capture extends CordovaPlugin {
                 pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, ex.toString()));
                 return;
             }
+
+            // undocumented feature of the android camera application.
+            // of course samsung uses a custom application and doesn't implement this feature.
+            // on the devices that do, skip the confirmation screen.
+            intent.putExtra("android.intent.extra.quickCapture", true);
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, Uri.fromFile(photo));
 
+            this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
+        }
+    }
+
+    /**
+     * Sets up an intent to capture images.  Result handled by onActivityResult()
+     */
+    private void captureMultipleImages(Request req) {
+        // when we query available images, this is the date we will ensure the image is after.
+        multipleImagesStartTime = System.currentTimeMillis() / 1000L;
+
+        boolean needExternalStoragePermission =
+            !PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+
+        boolean needCameraPermission = cameraPermissionInManifest &&
+            !PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
+
+        if (needExternalStoragePermission || needCameraPermission) {
+            if (needExternalStoragePermission && needCameraPermission) {
+                PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA});
+            } else if (needExternalStoragePermission) {
+                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
+            } else {
+                PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.CAMERA);
+            }
+        } else {
+            Intent intent = new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA_SECURE);
+            //force the intent to use opencamera.
+            intent.setClassName("net.sourceforge.opencamera", "net.sourceforge.opencamera.MainActivity");
             this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
         }
     }
@@ -314,20 +350,23 @@ public class Capture extends CordovaPlugin {
      * @param intent            An Intent, which can return result data to the caller (various data can be attached to Intent "extras").
      * @throws JSONException
      */
-    public void onActivityResult(int requestCode, int resultCode, final Intent intent) {
+    public void onActivityResult(int requestCode, final int resultCode, final Intent intent) {
         final Request req = pendingRequests.get(requestCode);
 
         // Result received okay
-        if (resultCode == Activity.RESULT_OK) {
+        if (resultCode == Activity.RESULT_OK || (resultCode == Activity.RESULT_CANCELED && req.action == CAPTURE_MULTIPLE_IMAGES)) {
             Runnable processActivityResult = new Runnable() {
                 @Override
                 public void run() {
-                    switch(req.action) {
+                    switch (req.action) {
                         case CAPTURE_AUDIO:
                             onAudioActivityResult(req, intent);
                             break;
                         case CAPTURE_IMAGE:
                             onImageActivityResult(req);
+                            break;
+                        case CAPTURE_MULTIPLE_IMAGES:
+                            onMultipleImageCaptureActivityResult(req);
                             break;
                         case CAPTURE_VIDEO:
                             onVideoActivityResult(req, intent);
@@ -375,6 +414,51 @@ public class Capture extends CordovaPlugin {
         } else {
             // still need to capture more audio clips
             captureAudio(req);
+        }
+    }
+
+    public void onMultipleImageCaptureActivityResult(Request req) {
+        try {
+            //Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory().getPath() + "/" + Environment.DIRECTORY_DCIM + "/OpenCamera/"));
+            Cursor cursor = this.cordova.getActivity().getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new String[]{MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_ADDED}, null, null,null);
+
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    Uri imageUri = Uri.parse(cursor.getString(0));
+                    int dateAdded = cursor.getInt(1);
+                    if(dateAdded < multipleImagesStartTime)
+                        continue;
+
+                    File inputFile = new File(imageUri.getPath());
+                    File outputFile = getWritableFile("jpg");
+
+                    if(!moveFile(inputFile, outputFile))
+                        throw new IOException("Error copying images");
+
+                    req.results.put(createMediaFile(Uri.fromFile(outputFile)));
+
+                }
+                cursor.close();
+
+                if(req.results.length() > 0) {
+                    pendingRequests.resolveWithSuccess(req);
+                } else {
+                    pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Cancelled"));
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error capturing image."));
+        }
+    }
+
+    private boolean isPackageInstalled(String packagename) {
+        try {
+            PackageManager packageManager = this.cordova.getActivity().getPackageManager();
+            packageManager.getPackageInfo(packagename, PackageManager.GET_ACTIVITIES);
+            return true;
+        } catch (NameNotFoundException e) {
+            return false;
         }
     }
 
