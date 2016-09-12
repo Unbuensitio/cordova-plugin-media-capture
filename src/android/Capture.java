@@ -26,6 +26,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.media.MediaScannerConnection;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -435,6 +438,8 @@ public class Capture extends CordovaPlugin {
                     if(!moveFile(inputFile, outputFile))
                         throw new IOException("Error copying images");
 
+                    deleteFromCameraRoll(inputFile);
+
                     req.results.put(createMediaFile(Uri.fromFile(outputFile)));
 
                 }
@@ -741,6 +746,27 @@ public class Capture extends CordovaPlugin {
 
     public void onRestoreStateForActivityResult(Bundle state, CallbackContext callbackContext) {
         pendingRequests.setLastSavedState(state, callbackContext);
+    }
+
+    private void deleteFromCameraRoll(File file) {
+        // Set up the projection (we only need the ID)
+        String[] projection = {MediaStore.Images.Media._ID};
+
+        // Match on the file path
+        String selection = MediaStore.Images.Media.DATA + " = ?";
+        String[] selectionArgs = new String[]{file.getAbsolutePath()};
+
+        // Query for the ID of the media matching the file path
+        Uri queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        ContentResolver contentResolver = this.cordova.getActivity().getContentResolver();
+        Cursor c = contentResolver.query(queryUri, projection, selection, selectionArgs, null);
+        if (c.moveToFirst()) {
+            // We found the ID. Deleting the item via the content provider will also remove the file
+            long id = c.getLong(c.getColumnIndexOrThrow(MediaStore.Images.Media._ID));
+            Uri deleteUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
+            contentResolver.delete(deleteUri, null, null);
+        }
+        c.close();
     }
 }
 
