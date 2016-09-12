@@ -57,6 +57,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 public class Capture extends CordovaPlugin {
 
@@ -423,33 +424,38 @@ public class Capture extends CordovaPlugin {
     public void onMultipleImageCaptureActivityResult(Request req) {
         try {
             //Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory().getPath() + "/" + Environment.DIRECTORY_DCIM + "/OpenCamera/"));
-            Cursor cursor = this.cordova.getActivity().getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, new String[]{MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_ADDED}, null, null,null);
 
-            if (cursor != null) {
-                while (cursor.moveToNext()) {
-                    Uri imageUri = Uri.parse(cursor.getString(0));
-                    int dateAdded = cursor.getInt(1);
-                    if(dateAdded < multipleImagesStartTime)
-                        continue;
+            for(Uri contentType:new Uri[]{MediaStore.Images.Media.EXTERNAL_CONTENT_URI, MediaStore.Video.Media.EXTERNAL_CONTENT_URI}) {
+                Cursor cursor = this.cordova.getActivity().getContentResolver().query(contentType, new String[]{MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_ADDED}, null, null, null);
 
-                    File inputFile = new File(imageUri.getPath());
-                    File outputFile = getWritableFile("jpg");
+                if (cursor != null) {
+                    while (cursor.moveToNext()) {
+                        Uri mediaUri = Uri.parse(cursor.getString(0));
+                        int dateAdded = cursor.getInt(1);
+                        if (dateAdded < multipleImagesStartTime)
+                            continue;
 
-                    if(!moveFile(inputFile, outputFile))
-                        throw new IOException("Error copying images");
+                        String extension = MimeTypeMap.getFileExtensionFromUrl(mediaUri.toString());
 
-                    deleteFromCameraRoll(inputFile);
+                        File inputFile = new File(mediaUri.getPath());
+                        File outputFile = getWritableFile(extension);
 
-                    req.results.put(createMediaFile(Uri.fromFile(outputFile)));
+                        if (!moveFile(inputFile, outputFile))
+                            throw new IOException("Error copying images");
 
+                        deleteFromCameraRoll(inputFile);
+
+                        req.results.put(createMediaFile(Uri.fromFile(outputFile)));
+
+                    }
+                    cursor.close();
                 }
-                cursor.close();
+            }
 
-                if(req.results.length() > 0) {
-                    pendingRequests.resolveWithSuccess(req);
-                } else {
-                    pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Cancelled"));
-                }
+            if (req.results.length() > 0) {
+                pendingRequests.resolveWithSuccess(req);
+            } else {
+                pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_NO_MEDIA_FILES, "Cancelled"));
             }
         } catch (IOException e) {
             e.printStackTrace();
