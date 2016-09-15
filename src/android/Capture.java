@@ -443,7 +443,7 @@ public class Capture extends CordovaPlugin {
                         if (!moveFile(inputFile, outputFile))
                             throw new IOException("Error copying images");
 
-                        deleteFromCameraRoll(inputFile);
+                        deleteFromCameraRoll(inputFile, contentType);
 
                         req.results.put(createMediaFile(Uri.fromFile(outputFile)));
 
@@ -754,12 +754,17 @@ public class Capture extends CordovaPlugin {
         pendingRequests.setLastSavedState(state, callbackContext);
     }
 
-    private void deleteFromCameraRoll(File file) {
+    private void deleteFromCameraRoll(File file, Uri contentType) {
         // Set up the projection (we only need the ID)
-        String[] projection = {MediaStore.Images.Media._ID};
+        String[] projection = contentType == MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            ? new String[]{MediaStore.Images.Media._ID}
+            : new String[]{MediaStore.Video.Media._ID};
 
         // Match on the file path
-        String selection = MediaStore.Images.Media.DATA + " = ?";
+        String selection = contentType == MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            ? MediaStore.Images.Media.DATA + " = ?"
+            : MediaStore.Video.Media.DATA + " = ?";
+
         String[] selectionArgs = new String[]{file.getAbsolutePath()};
 
         // Query for the ID of the media matching the file path
@@ -775,4 +780,3 @@ public class Capture extends CordovaPlugin {
         c.close();
     }
 }
-
