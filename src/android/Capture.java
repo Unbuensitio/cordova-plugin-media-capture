@@ -28,7 +28,6 @@ import java.lang.reflect.Method;
 
 import android.content.ContentResolver;
 import android.content.ContentUris;
-import android.media.MediaScannerConnection;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -69,7 +68,8 @@ public class Capture extends CordovaPlugin {
     private static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
     private static final int CAPTURE_IMAGE = 1;     // Constant for capture image
     private static final int CAPTURE_VIDEO = 2;     // Constant for capture video
-    private static final int CAPTURE_MULTIPLE_IMAGES = 3;  // constant for capturing multple images in one session. ATM only relevant on Galaxy Camera 2
+    private static final int CAPTURE_MULTIPLE_IMAGES = 3;  // constant for capturing multiple images in one session. ATM only relevant on Galaxy Camera 2
+    private static final int CAPTURE_MULTIPLE_VIDEOS = 4;  // constant for capturing multiple videos in one session. ATM only relevant on Galaxy Camera 2
     private static final String LOG_TAG = "Capture";
 
     private static final int CAPTURE_INTERNAL_ERR = 0;
@@ -136,13 +136,19 @@ public class Capture extends CordovaPlugin {
         }
         else if (action.equals("captureImage")) {
             if (Build.MODEL.equals("EK-GC200") && Build.MANUFACTURER.equals("samsung") && isPackageInstalled("net.sourceforge.opencamera")) {
-                this.captureMultipleImages(pendingRequests.createRequest(CAPTURE_MULTIPLE_IMAGES, options, callbackContext));
+                boolean isVideo = false;
+                this.captureMultipleMedia(pendingRequests.createRequest(CAPTURE_MULTIPLE_IMAGES, options, callbackContext), isVideo);
             } else {
                 this.captureImage(pendingRequests.createRequest(CAPTURE_IMAGE, options, callbackContext));
             }
         }
         else if (action.equals("captureVideo")) {
-            this.captureVideo(pendingRequests.createRequest(CAPTURE_VIDEO, options, callbackContext));
+            if (Build.MODEL.equals("EK-GC200") && Build.MANUFACTURER.equals("samsung") && isPackageInstalled("net.sourceforge.opencamera")) {
+                boolean isVideo = true;
+                this.captureMultipleMedia(pendingRequests.createRequest(CAPTURE_MULTIPLE_VIDEOS, options, callbackContext), isVideo);
+            } else {
+                this.captureVideo(pendingRequests.createRequest(CAPTURE_VIDEO, options, callbackContext));
+            }
         }
         else {
             return false;
@@ -297,7 +303,7 @@ public class Capture extends CordovaPlugin {
     /**
      * Sets up an intent to capture images.  Result handled by onActivityResult()
      */
-    private void captureMultipleImages(Request req) {
+    private void captureMultipleMedia(Request req, boolean isVideo) {
         // when we query available images, this is the date we will ensure the image is after.
         multipleImagesStartTime = System.currentTimeMillis() / 1000L;
 
@@ -316,7 +322,11 @@ public class Capture extends CordovaPlugin {
                 PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.CAMERA);
             }
         } else {
-            Intent intent = new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA_SECURE);
+            String intentAction = isVideo
+                    ? MediaStore.INTENT_ACTION_VIDEO_CAMERA
+                    : MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA_SECURE;
+
+            Intent intent = new Intent(intentAction);
             //force the intent to use opencamera.
             intent.setClassName("net.sourceforge.opencamera", "net.sourceforge.opencamera.MainActivity");
             this.cordova.startActivityForResult((CordovaPlugin) this, intent, req.requestCode);
@@ -358,7 +368,7 @@ public class Capture extends CordovaPlugin {
         final Request req = pendingRequests.get(requestCode);
 
         // Result received okay
-        if (resultCode == Activity.RESULT_OK || (resultCode == Activity.RESULT_CANCELED && req.action == CAPTURE_MULTIPLE_IMAGES)) {
+        if (resultCode == Activity.RESULT_OK || (resultCode == Activity.RESULT_CANCELED && (req.action == CAPTURE_MULTIPLE_IMAGES || req.action == CAPTURE_MULTIPLE_VIDEOS))) {
             Runnable processActivityResult = new Runnable() {
                 @Override
                 public void run() {
@@ -370,7 +380,10 @@ public class Capture extends CordovaPlugin {
                             onImageActivityResult(req);
                             break;
                         case CAPTURE_MULTIPLE_IMAGES:
-                            onMultipleImageCaptureActivityResult(req);
+                            onMultipleMediaCaptureActivityResult(req);
+                            break;
+                        case CAPTURE_MULTIPLE_VIDEOS:
+                            onMultipleMediaCaptureActivityResult(req);
                             break;
                         case CAPTURE_VIDEO:
                             onVideoActivityResult(req, intent);
@@ -421,7 +434,7 @@ public class Capture extends CordovaPlugin {
         }
     }
 
-    public void onMultipleImageCaptureActivityResult(Request req) {
+    public void onMultipleMediaCaptureActivityResult(Request req) {
         try {
             //Uri uri = Uri.fromFile(new File(Environment.getExternalStorageDirectory().getPath() + "/" + Environment.DIRECTORY_DCIM + "/OpenCamera/"));
 
