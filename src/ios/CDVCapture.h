@@ -49,10 +49,12 @@ typedef NSUInteger CDVCaptureError;
     CDVImagePicker* pickerController;
     BOOL inUse;
     BOOL isAnimated;
+    BOOL isTemporary;
     CGFloat jpegCompression;
 }
 @property BOOL inUse;
 @property BOOL isAnimated;
+@property BOOL isTemporary;
 @property CGFloat jpegCompression;
 - (void)captureAudio:(CDVInvokedUrlCommand*)command;
 - (void)captureImage:(CDVInvokedUrlCommand*)command;
