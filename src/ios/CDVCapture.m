@@ -83,6 +83,7 @@
 {
     self.inUse = NO;
     self.isAnimated = YES;
+    self.isTemporary = NO; // only available for video.
     self.jpegCompression = 0.5;
 }
 
@@ -100,6 +101,7 @@
         self.isAnimated = [animated boolValue];
     }
 
+    
     NSNumber* duration = [options objectForKey:@"duration"];
     // the default value of duration is 0 so use nil (no duration) if default value
     if (duration) {
@@ -145,7 +147,7 @@
     if (animated) {
         self.isAnimated = [animated boolValue];
     }
-
+    
     NSNumber* quality = [options objectForKey:@"quality"];
     if (quality) {
         CGFloat qualityValue = [quality floatValue];
@@ -202,7 +204,7 @@
     } else {
         data = UIImageJPEGRepresentation(image, self.jpegCompression);
     }
-
+    
     // write to application directory
     NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString* docsPath = ([paths count] > 0)
@@ -249,6 +251,11 @@
     NSNumber* animated = [options objectForKey:@"animated"];
     if (animated) {
         self.isAnimated = [animated boolValue];
+    }
+    
+    NSNumber* temporary = [options objectForKey:@"isTemporary"];
+    if (temporary) {
+        self.isTemporary = [temporary boolValue];
     }
 
     NSNumber* duration = [options objectForKey:@"duration"];
@@ -318,26 +325,29 @@
         UISaveVideoAtPathToSavedPhotosAlbum(moviePath, nil, nil, nil);
         NSLog(@"finished saving movie");
     }*/
+    
+    NSString* filePath = moviePath;
+    
+    if (!self.isTemporary) {
+    	// write to application directory
+    	NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    	NSString* docsPath = ([paths count] > 0)
+        	? [paths objectAtIndex:0]
+        	: nil;
+    	NSFileManager* fileMgr = [[NSFileManager alloc] init];
 
-    // write to application directory
-    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString* docsPath = ([paths count] > 0)
-        ? [paths objectAtIndex:0]
-        : nil;
-    NSFileManager* fileMgr = [[NSFileManager alloc] init];
+    	// generate unique file name
+    	int i = 1;
+    	do {
+       	 filePath = [NSString stringWithFormat:@"%@/video_%05d.mp4", docsPath, i++];
+    	} while ([fileMgr fileExistsAtPath:filePath]);
 
-    // generate unique file name
-    NSString* filePath;
-    int i = 1;
-    do {
-        filePath = [NSString stringWithFormat:@"%@/video_%05d.mp4", docsPath, i++];
-    } while ([fileMgr fileExistsAtPath:filePath]);
-
-    NSError *error = nil ;
-    BOOL res = [[NSFileManager defaultManager] copyItemAtPath:moviePath toPath:filePath error:&error];
-    if(!res) {
-        CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
-        return pluginResult;
+    	NSError *error = nil ;
+    	BOOL res = [[NSFileManager defaultManager] copyItemAtPath:moviePath toPath:filePath error:&error];
+    	if(!res) {
+       	 CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
+       	 return pluginResult;
+    	}
     }
 
     // create MediaFile object
