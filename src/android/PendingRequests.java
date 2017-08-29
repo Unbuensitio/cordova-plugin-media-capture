@@ -182,7 +182,7 @@ public class PendingRequests {
         public JSONArray results = new JSONArray();
 
         // The callback context for this plugin request
-        private CallbackContext callbackContext;
+        CallbackContext callbackContext;
 
         private Request(int action, JSONObject options, CallbackContext callbackContext) throws JSONException {
             this.callbackContext = callbackContext;

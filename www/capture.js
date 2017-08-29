@@ -30,11 +30,19 @@ var exec = require('cordova/exec'),
  * @param {Function} errorCB
  * @param {CaptureVideoOptions} options
  */
-function _capture(type, successCallback, errorCallback, options) {
-	var win = function(pluginResult) {
-		successCallback(helpers.wrapMediaFiles(pluginResult));
+function _capture(type, success, error, options) {
+	options = options || {};
+	options.progress = options.progress || function(result) {};
+
+	var successCallback = function(result) {
+		if (typeof result !== 'undefined' && typeof result.type !== 'undefined' && typeof options.progress === 'function') {
+			options.progress(result);
+			return;
+		}
+
+		success(helpers.wrapMediaFiles(result));
 	};
-	exec(win, errorCallback, "Capture", type, [options]);
+	exec(successCallback, error, "Capture", type, [options]);
 }
 
 /**

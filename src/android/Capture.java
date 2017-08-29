@@ -39,6 +39,7 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginManager;
+import org.apache.cordova.PluginResult;
 import org.apache.cordova.mediacapture.PendingRequests.Request;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -77,6 +78,9 @@ public class Capture extends CordovaPlugin {
 //    private static final int CAPTURE_INVALID_ARGUMENT = 2;
     private static final int CAPTURE_NO_MEDIA_FILES = 3;
     private static final int CAPTURE_PERMISSION_DENIED = 4;
+
+    private static final String PROGRESS_MEDIA_IMPORTED = "MEDIA_IMPORTED";
+    private static final String PROGRESS_MEDIA_IMPORTING = "MEDIA_IMPORTING";
 
     private boolean cameraPermissionInManifest;     // Whether or not the CAMERA permission is declared in AndroidManifest.xml
 
@@ -418,12 +422,19 @@ public class Capture extends CordovaPlugin {
         }
     }
 
-
     public void onAudioActivityResult(Request req, Intent intent) {
+        // progress event
+        onMediaImporting(req.callbackContext, 1);
+
         // Get the uri of the audio clip
         Uri data = intent.getData();
+
         // create a file object from the uri
-        req.results.put(createMediaFile(data));
+        JSONObject mediaFile = createMediaFile(data);
+        req.results.put(mediaFile);
+
+        // progress event
+        onMediaImported(req.callbackContext, mediaFile.optString("fullPath"));
 
         if (req.results.length() >= req.limit) {
             // Send Uri back to JavaScript for listening to audio
@@ -442,6 +453,9 @@ public class Capture extends CordovaPlugin {
                 Cursor cursor = this.cordova.getActivity().getContentResolver().query(contentType, new String[]{MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_ADDED}, null, null, null);
 
                 if (cursor != null) {
+                    // progress event
+                    onMediaImporting(req.callbackContext, cursor.getCount());
+
                     while (cursor.moveToNext()) {
                         Uri mediaUri = Uri.parse(cursor.getString(0));
                         int dateAdded = cursor.getInt(1);
@@ -463,8 +477,12 @@ public class Capture extends CordovaPlugin {
                             deleteImageFromCameraRoll(inputFile);
                         }
 
-                        req.results.put(createMediaFile(Uri.fromFile(outputFile)));
+                        // create a file object from the uri
+                        JSONObject mediaFile = createMediaFile(Uri.fromFile(outputFile));
+                        req.results.put(mediaFile);
 
+                        // progress event
+                        onMediaImported(req.callbackContext, mediaFile.optString("fullPath"));
                     }
                     cursor.close();
                 }
@@ -479,6 +497,36 @@ public class Capture extends CordovaPlugin {
             e.printStackTrace();
             pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_INTERNAL_ERR, "Error capturing image."));
         }
+    }
+
+    private void onMediaImported(CallbackContext callbackContext, String path) {
+        JSONObject jsonObj = new JSONObject();
+        try {
+            jsonObj.put("data", path);
+            jsonObj.put("type", PROGRESS_MEDIA_IMPORTED);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        PluginResult progressResult = new PluginResult(PluginResult.Status.OK, jsonObj);
+        progressResult.setKeepCallback(true);
+
+        callbackContext.sendPluginResult(progressResult);
+    }
+
+    private void onMediaImporting(CallbackContext callbackContext, int count) {
+        JSONObject jsonObj = new JSONObject();
+        try {
+            jsonObj.put("data", count);
+            jsonObj.put("type", PROGRESS_MEDIA_IMPORTING);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        PluginResult progressResult = new PluginResult(PluginResult.Status.OK, jsonObj);
+        progressResult.setKeepCallback(true);
+
+        callbackContext.sendPluginResult(progressResult);
     }
 
     private boolean isPackageInstalled(String packagename) {
@@ -497,6 +545,9 @@ public class Capture extends CordovaPlugin {
         // It crashes in the emulator and on my phone with a null pointer exception
         // To work around it I had to grab the code from CameraLauncher.java
         try {
+            // progress event
+            onMediaImporting(req.callbackContext, 1);
+
             // Create entry in media store for image
             // (Don't use insertImage() because it uses default compression setting of 50 - no way to change it)
             File inputFile = new File(getTempDirectoryPath() + "/Capture.jpg");
@@ -508,8 +559,12 @@ public class Capture extends CordovaPlugin {
 
             deleteImageFromCameraRoll(inputFile);
 
-            // Add image to results
-            req.results.put(createMediaFile(Uri.fromFile(outputFile)));
+            // create a file object from the uri
+            JSONObject mediaFile = createMediaFile(Uri.fromFile(outputFile));
+            req.results.put(mediaFile);
+
+            // progress event
+            onMediaImported(req.callbackContext, mediaFile.optString("fullPath"));
 
             //checkForDuplicateImage();
 
@@ -535,6 +590,9 @@ public class Capture extends CordovaPlugin {
         }
 
         try {
+            // progress event
+            onMediaImporting(req.callbackContext, 1);
+
             File inputFile = webView.getResourceApi().mapUriToFile(data);
             File outputFile = getWritableFile("mp4");
 
@@ -545,7 +603,11 @@ public class Capture extends CordovaPlugin {
             deleteVideoFromCameraRoll(inputFile);
 
             // create a file object from the uri
-            req.results.put(createMediaFile(Uri.fromFile(outputFile)));
+            JSONObject mediaFile = createMediaFile(Uri.fromFile(outputFile));
+            req.results.put(mediaFile);
+
+            // progress event
+            onMediaImported(req.callbackContext, mediaFile.optString("fullPath"));
 
             if (req.results.length() >= req.limit) {
                 // Send Uri back to JavaScript for viewing video
