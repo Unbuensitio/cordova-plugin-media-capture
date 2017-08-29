@@ -58,17 +58,17 @@
 - (BOOL)prefersStatusBarHidden {
     return YES;
 }
-    
+
 - (UIViewController*)childViewControllerForStatusBarHidden {
     return nil;
 }
-    
+
 - (void)viewWillAppear:(BOOL)animated {
     SEL sel = NSSelectorFromString(@"setNeedsStatusBarAppearanceUpdate");
     if ([self respondsToSelector:sel]) {
         [self performSelector:sel withObject:nil afterDelay:0];
     }
-    
+
     [super viewWillAppear:animated];
 }
 
@@ -101,7 +101,6 @@
         self.isAnimated = [animated boolValue];
     }
 
-    
     NSNumber* duration = [options objectForKey:@"duration"];
     // the default value of duration is 0 so use nil (no duration) if default value
     if (duration) {
@@ -147,7 +146,7 @@
     if (animated) {
         self.isAnimated = [animated boolValue];
     }
-    
+
     NSNumber* quality = [options objectForKey:@"quality"];
     if (quality) {
         CGFloat qualityValue = [quality floatValue];
@@ -204,7 +203,7 @@
     } else {
         data = UIImageJPEGRepresentation(image, self.jpegCompression);
     }
-    
+
     // write to application directory
     NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString* docsPath = ([paths count] > 0)
@@ -252,7 +251,7 @@
     if (animated) {
         self.isAnimated = [animated boolValue];
     }
-    
+
     NSNumber* temporary = [options objectForKey:@"isTemporary"];
     if (temporary) {
         self.isTemporary = [temporary boolValue];
@@ -341,9 +340,9 @@
         UISaveVideoAtPathToSavedPhotosAlbum(moviePath, nil, nil, nil);
         NSLog(@"finished saving movie");
     }*/
-    
+
     NSString* filePath = moviePath;
-    
+
     if (!self.isTemporary) {
     	// write to application directory
     	NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
@@ -418,7 +417,7 @@
         movieArray ? (NSObject*)                          movieArray:[NSNull null], @"video",
         audioArray ? (NSObject*)                          audioArray:[NSNull null], @"audio",
         nil];
-    
+
     NSData* jsonData = [NSJSONSerialization dataWithJSONObject:modes options:0 error:nil];
     NSString* jsonStr = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
 
@@ -689,7 +688,7 @@
 	if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
         self.edgesForExtendedLayout = UIRectEdgeNone;
     }
-    
+
     // create view and display
     CGRect viewRect = [[UIScreen mainScreen] applicationFrame];
     UIView* tmp = [[UIView alloc] initWithFrame:viewRect];
@@ -820,7 +819,7 @@
 {
     UIInterfaceOrientationMask orientation = UIInterfaceOrientationMaskPortrait;
     UIInterfaceOrientationMask supported = [captureCommand.viewController supportedInterfaceOrientations];
-    
+
     orientation = orientation | (supported & UIInterfaceOrientationMaskPortraitUpsideDown);
     return orientation;
 }
@@ -829,7 +828,7 @@
 {
     NSUInteger orientation = UIInterfaceOrientationMaskPortrait; // must support portrait
     NSUInteger supported = [captureCommand.viewController supportedInterfaceOrientations];
-    
+
     orientation = orientation | (supported & UIInterfaceOrientationMaskPortraitUpsideDown);
     return orientation;
 }
@@ -856,7 +855,7 @@
         __block NSError* error = nil;
 
         __weak CDVAudioRecorderViewController* weakSelf = self;
-        
+
         void (^startRecording)(void) = ^{
             [weakSelf.avSession setCategory:AVAudioSessionCategoryRecord error:&error];
             [weakSelf.avSession setActive:YES error:&error];
@@ -877,7 +876,7 @@
             }
             UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification, nil);
         };
-        
+
         SEL rrpSel = NSSelectorFromString(@"requestRecordPermission:");
         if ([self.avSession respondsToSelector:rrpSel])
         {

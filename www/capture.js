@@ -20,7 +20,7 @@
 */
 
 var exec = require('cordova/exec'),
-    helpers = require('./helpers');
+	helpers = require('./helpers');
 
 /**
  * Launches a capture of different types.
@@ -31,20 +31,19 @@ var exec = require('cordova/exec'),
  * @param {CaptureVideoOptions} options
  */
 function _capture(type, successCallback, errorCallback, options) {
-    var win = function(pluginResult) {
-        successCallback(helpers.wrapMediaFiles(pluginResult));
-    };
-    exec(win, errorCallback, "Capture", type, [options]);
+	var win = function(pluginResult) {
+		successCallback(helpers.wrapMediaFiles(pluginResult));
+	};
+	exec(win, errorCallback, "Capture", type, [options]);
 }
-
 
 /**
  * The Capture interface exposes an interface to the camera and microphone of the hosting device.
  */
 function Capture() {
-    this.supportedAudioModes = [];
-    this.supportedImageModes = [];
-    this.supportedVideoModes = [];
+	this.supportedAudioModes = [];
+	this.supportedImageModes = [];
+	this.supportedVideoModes = [];
 }
 
 /**
@@ -55,7 +54,7 @@ function Capture() {
  * @param {CaptureAudioOptions} options
  */
 Capture.prototype.captureAudio = function(successCallback, errorCallback, options){
-    _capture("captureAudio", successCallback, errorCallback, options);
+	_capture("captureAudio", successCallback, errorCallback, options);
 };
 
 /**
@@ -66,7 +65,7 @@ Capture.prototype.captureAudio = function(successCallback, errorCallback, option
  * @param {CaptureImageOptions} options
  */
 Capture.prototype.captureImage = function(successCallback, errorCallback, options){
-    _capture("captureImage", successCallback, errorCallback, options);
+	_capture("captureImage", successCallback, errorCallback, options);
 };
 
 /**
@@ -77,8 +76,7 @@ Capture.prototype.captureImage = function(successCallback, errorCallback, option
  * @param {CaptureVideoOptions} options
  */
 Capture.prototype.captureVideo = function(successCallback, errorCallback, options){
-    _capture("captureVideo", successCallback, errorCallback, options);
+	_capture("captureVideo", successCallback, errorCallback, options);
 };
-
 
 module.exports = new Capture();
