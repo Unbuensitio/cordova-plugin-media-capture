@@ -28,6 +28,9 @@
 #define kW3CMediaFormatDuration @"duration"
 #define kW3CMediaModeType @"type"
 
+#define PROGRESS_MEDIA_IMPORTING @"MEDIA_IMPORTING"
+#define PROGRESS_MEDIA_IMPORTED @"MEDIA_IMPORTED"
+
 @implementation NSBundle (PluginExtensions)
 
 + (NSBundle*) pluginBundle:(CDVPlugin*)plugin {
@@ -119,7 +122,7 @@
 
         // Now create a nav controller and display the view...
         CDVAudioNavigationController* navController = [[CDVAudioNavigationController alloc] initWithRootViewController:audioViewController];
-
+	
         self.inUse = YES;
 
         [self.viewController presentViewController:navController animated:self.isAnimated completion:nil];
@@ -134,7 +137,7 @@
 {
     NSString* callbackId = command.callbackId;
     NSDictionary* options = [command argumentAtIndex:0];
-
+	
     if ([options isKindOfClass:[NSNull class]]) {
         options = [NSDictionary dictionary];
     }
@@ -185,6 +188,26 @@
     }
 }
 
+- (void)onMediaImporting:(NSString*)callbackId count:(NSNumber*)count {
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    [result setObject:count forKey:@"data"];
+    [result setObject:PROGRESS_MEDIA_IMPORTING forKey:@"type"];
+    
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+    [pluginResult setKeepCallbackAsBool:true];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId: callbackId];
+}
+
+- (void)onMediaImported:(NSString*)callbackId filePath:(NSString*)filePath {
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    [result setObject:filePath forKey:@"data"];
+    [result setObject:PROGRESS_MEDIA_IMPORTED forKey:@"type"];
+    
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+    [pluginResult setKeepCallbackAsBool:true];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId: callbackId];
+}
+
 /* Process a still image from the camera.
  * IN:
  *  UIImage* image - the UIImage data returned from the camera
@@ -192,6 +215,8 @@
  */
 - (CDVPluginResult*)processImage:(UIImage*)image type:(NSString*)mimeType forCallbackId:(NSString*)callbackId
 {
+    [self onMediaImporting:callbackId count:[NSNumber numberWithInteger:1]];
+
     CDVPluginResult* result = nil;
 
     // save the image to photo album
@@ -232,6 +257,8 @@
 
         result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
     }
+    
+    [self onMediaImported:callbackId filePath:filePath];
 
     return result;
 }
@@ -342,6 +369,7 @@
     }*/
 
     NSString* filePath = moviePath;
+    [self onMediaImporting:callbackId count:[NSNumber numberWithInteger:1]];
 
     if (!self.isTemporary) {
     	// write to application directory
@@ -364,6 +392,8 @@
        	 return pluginResult;
     	}
     }
+    
+    [self onMediaImported:callbackId filePath:filePath];
 
     // create MediaFile object
     NSDictionary* fileDict = [self getMediaDictionaryFromPath:filePath ofType:nil];
@@ -978,7 +1008,7 @@
     [self stopRecordingCleanup];
 
     // generate success result
-    if (flag) {
+    if (flag) {        
         NSString* filePath = [avRecorder.url path];
         // NSLog(@"filePath: %@", filePath);
         NSDictionary* fileDict = [captureCommand getMediaDictionaryFromPath:filePath ofType:@"audio/wav"];
@@ -1013,5 +1043,4 @@
 
     [super viewWillAppear:animated];
 }
-
 @end
