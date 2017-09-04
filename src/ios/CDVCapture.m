@@ -1006,14 +1006,17 @@
     // may be called when timed audio finishes - need to stop time and reset buttons
     [self.timer invalidate];
     [self stopRecordingCleanup];
+    
+    [self.captureCommand onMediaImporting:callbackId count:[NSNumber numberWithInt:1]];
 
     // generate success result
-    if (flag) {        
+    if (flag) {
         NSString* filePath = [avRecorder.url path];
         // NSLog(@"filePath: %@", filePath);
         NSDictionary* fileDict = [captureCommand getMediaDictionaryFromPath:filePath ofType:@"audio/wav"];
         NSArray* fileArray = [NSArray arrayWithObject:fileDict];
-
+        
+        [self.captureCommand onMediaImported:callbackId filePath:filePath];
         self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
     } else {
         self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_IO_EXCEPTION messageToErrorObject:CAPTURE_INTERNAL_ERR];
