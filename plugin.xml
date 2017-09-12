@@ -54,6 +54,10 @@ xmlns:rim="http://www.blackberry.com/ns/widgets"
         <clobbers target="CaptureImageOptions" />
     </js-module>
 
+    <js-module src="www/CaptureProgress.js" name="CaptureProgress">
+        <clobbers target="CaptureProgress" />
+    </js-module>
+
     <js-module src="www/CaptureVideoOptions.js" name="CaptureVideoOptions">
         <clobbers target="CaptureVideoOptions" />
     </js-module>
