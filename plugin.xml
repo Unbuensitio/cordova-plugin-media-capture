@@ -34,8 +34,20 @@ xmlns:rim="http://www.blackberry.com/ns/widgets"
     <dependency id="cordova-plugin-file" version="^4.0.0" />
     <dependency id="cordova-plugin-compat" version="^1.0.0" />
 
+    <js-module src="www/capture.js" name="capture">
+        <clobbers target="navigator.device.capture" />
+    </js-module>
+
+    <js-module src="www/helpers.js" name="helpers">
+        <runs />
+    </js-module>
+
     <js-module src="www/CaptureAudioOptions.js" name="CaptureAudioOptions">
         <clobbers target="CaptureAudioOptions" />
+    </js-module>
+
+    <js-module src="www/CaptureError.js" name="CaptureError">
+        <clobbers target="CaptureError" />
     </js-module>
 
     <js-module src="www/CaptureImageOptions.js" name="CaptureImageOptions">
@@ -46,24 +58,12 @@ xmlns:rim="http://www.blackberry.com/ns/widgets"
         <clobbers target="CaptureVideoOptions" />
     </js-module>
 
-    <js-module src="www/CaptureError.js" name="CaptureError">
-        <clobbers target="CaptureError" />
-    </js-module>
-
-    <js-module src="www/MediaFileData.js" name="MediaFileData">
-        <clobbers target="MediaFileData" />
-    </js-module>
-
     <js-module src="www/MediaFile.js" name="MediaFile">
         <clobbers target="MediaFile" />
     </js-module>
 
-    <js-module src="www/helpers.js" name="helpers">
-        <runs />
-    </js-module>
-
-    <js-module src="www/capture.js" name="capture">
-        <clobbers target="navigator.device.capture" />
+    <js-module src="www/MediaFileData.js" name="MediaFileData">
+        <clobbers target="MediaFileData" />
     </js-module>
 
     <!-- android -->
