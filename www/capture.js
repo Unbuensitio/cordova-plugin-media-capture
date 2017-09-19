@@ -42,7 +42,7 @@ function _capture(type, success, error, options) {
 
 		success(helpers.wrapMediaFiles(result));
 	};
-	exec(successCallback, error, "Capture", type, [options]);
+	exec(successCallback, error, 'Capture', type, [options]);
 }
 
 /**
@@ -61,8 +61,8 @@ function Capture() {
  * @param {Function} errorCB
  * @param {CaptureAudioOptions} options
  */
-Capture.prototype.captureAudio = function(successCallback, errorCallback, options){
-	_capture("captureAudio", successCallback, errorCallback, options);
+Capture.prototype.captureAudio = function(successCallback, errorCallback, options) {
+	_capture('captureAudio', successCallback, errorCallback, options);
 };
 
 /**
@@ -72,8 +72,8 @@ Capture.prototype.captureAudio = function(successCallback, errorCallback, option
  * @param {Function} errorCB
  * @param {CaptureImageOptions} options
  */
-Capture.prototype.captureImage = function(successCallback, errorCallback, options){
-	_capture("captureImage", successCallback, errorCallback, options);
+Capture.prototype.captureImage = function(successCallback, errorCallback, options) {
+	_capture('captureImage', successCallback, errorCallback, options);
 };
 
 /**
@@ -83,8 +83,14 @@ Capture.prototype.captureImage = function(successCallback, errorCallback, option
  * @param {Function} errorCB
  * @param {CaptureVideoOptions} options
  */
-Capture.prototype.captureVideo = function(successCallback, errorCallback, options){
-	_capture("captureVideo", successCallback, errorCallback, options);
+Capture.prototype.captureVideo = function(successCallback, errorCallback, options) {
+	_capture('captureVideo', successCallback, errorCallback, options);
 };
+
+Capture.prototype.requestPermission = function(successCallback, errorCallback) {
+	var options = {};
+
+	exec(successCallback, errorCallback, 'Capture', 'requestPermission', [options]);
+}
 
 module.exports = new Capture();

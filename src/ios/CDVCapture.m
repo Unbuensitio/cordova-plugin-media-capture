@@ -122,7 +122,7 @@
 
         // Now create a nav controller and display the view...
         CDVAudioNavigationController* navController = [[CDVAudioNavigationController alloc] initWithRootViewController:audioViewController];
-	
+
         self.inUse = YES;
 
         [self.viewController presentViewController:navController animated:self.isAnimated completion:nil];
@@ -137,7 +137,7 @@
 {
     NSString* callbackId = command.callbackId;
     NSDictionary* options = [command argumentAtIndex:0];
-	
+
     if ([options isKindOfClass:[NSNull class]]) {
         options = [NSDictionary dictionary];
     }
@@ -192,7 +192,7 @@
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     [result setObject:count forKey:@"data"];
     [result setObject:PROGRESS_MEDIA_IMPORTING forKey:@"type"];
-    
+
     CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
     [pluginResult setKeepCallbackAsBool:true];
     [self.commandDelegate sendPluginResult:pluginResult callbackId: callbackId];
@@ -202,7 +202,7 @@
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     [result setObject:filePath forKey:@"data"];
     [result setObject:PROGRESS_MEDIA_IMPORTED forKey:@"type"];
-    
+
     CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
     [pluginResult setKeepCallbackAsBool:true];
     [self.commandDelegate sendPluginResult:pluginResult callbackId: callbackId];
@@ -257,7 +257,7 @@
 
         result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
     }
-    
+
     [self onMediaImported:callbackId filePath:filePath];
 
     return result;
@@ -356,6 +356,30 @@
     }
 }
 
+- (void)requestPermission:(CDVInvokedUrlCommand*)command
+{
+    [self.commandDelegate runInBackground:^{
+        AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
+        if (status == AVAuthorizationStatusNotDetermined) { // not determined
+            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
+                if (granted) { // Access has been granted ..do something
+                    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+                    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                } else { // Access denied ..do something
+                    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Please give this app permission to access your camera in your phone settings!"];
+                    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                }
+            }];
+        } else if(status == AVAuthorizationStatusAuthorized) { // authorized
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        } else if(status == AVAuthorizationStatusDenied || status == AVAuthorizationStatusRestricted) { // denied or restricted
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Please give this app permission to access your camera in your phone settings!"];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }
+    }];
+}
+
 - (CDVPluginResult*)processVideo:(NSString*)moviePath forCallbackId:(NSString*)callbackId
 {
     // save the movie to photo album (only avail as of iOS 3.1)
@@ -392,7 +416,7 @@
        	 return pluginResult;
     	}
     }
-    
+
     [self onMediaImported:callbackId filePath:filePath];
 
     // create MediaFile object
@@ -1006,7 +1030,7 @@
     // may be called when timed audio finishes - need to stop time and reset buttons
     [self.timer invalidate];
     [self stopRecordingCleanup];
-    
+
     [self.captureCommand onMediaImporting:callbackId count:[NSNumber numberWithInt:1]];
 
     // generate success result
@@ -1015,7 +1039,7 @@
         // NSLog(@"filePath: %@", filePath);
         NSDictionary* fileDict = [captureCommand getMediaDictionaryFromPath:filePath ofType:@"audio/wav"];
         NSArray* fileArray = [NSArray arrayWithObject:fileDict];
-        
+
         [self.captureCommand onMediaImported:callbackId filePath:filePath];
         self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
     } else {

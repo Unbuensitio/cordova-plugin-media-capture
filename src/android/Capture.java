@@ -71,6 +71,8 @@ public class Capture extends CordovaPlugin {
     private static final int CAPTURE_VIDEO = 2;     // Constant for capture video
     private static final int CAPTURE_MULTIPLE_IMAGES = 3;  // constant for capturing multiple images in one session. ATM only relevant on Galaxy Camera 2
     private static final int CAPTURE_MULTIPLE_VIDEOS = 4;  // constant for capturing multiple videos in one session. ATM only relevant on Galaxy Camera 2
+    private static final int REQUEST_PERMISSION = 99;
+
     private static final String LOG_TAG = "Capture";
 
     private static final int CAPTURE_INTERNAL_ERR = 0;
@@ -153,6 +155,9 @@ public class Capture extends CordovaPlugin {
             } else {
                 this.captureVideo(pendingRequests.createRequest(CAPTURE_VIDEO, options, callbackContext));
             }
+        }
+        else if (action.equals("requestPermission")) {
+            this.requestPermission(pendingRequests.createRequest(REQUEST_PERMISSION, options, callbackContext));
         }
         else {
             return false;
@@ -261,6 +266,21 @@ public class Capture extends CordovaPlugin {
         // Create the cache directory if it doesn't exist
         cache.mkdirs();
         return cache.getAbsolutePath();
+    }
+
+    private void requestPermission(Request req) {
+        boolean needCameraPermission = cameraPermissionInManifest && !PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
+        boolean needExternalStoragePermission = !PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+
+        if (needCameraPermission && needExternalStoragePermission) {
+            PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE});
+        } else if (needCameraPermission) {
+            PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.CAMERA);
+        } else if (needExternalStoragePermission) {
+            PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
+        } else {
+            pendingRequests.resolveWithSuccess(req);
+        }
     }
 
     private void captureImage(Request req) {
@@ -784,6 +804,9 @@ public class Capture extends CordovaPlugin {
             case CAPTURE_VIDEO:
                 this.captureVideo(req);
                 break;
+            case REQUEST_PERMISSION:
+                this.requestPermission(req);
+                break;
         }
     }
 
@@ -801,6 +824,11 @@ public class Capture extends CordovaPlugin {
             }
 
             if (success) {
+                if (req.action == REQUEST_PERMISSION) {
+                    pendingRequests.resolveWithSuccess(req);
+                    return;
+                }
+
                 executeRequest(req);
             } else {
                 pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_PERMISSION_DENIED, "Permission denied."));
@@ -808,7 +836,7 @@ public class Capture extends CordovaPlugin {
         }
     }
 
-	private File getWritableFile(String ext) 
+	private File getWritableFile(String ext)
 	{
         int i = 1;
         File dataDirectory = cordova.getActivity().getApplicationContext().getFilesDir();
