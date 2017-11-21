@@ -53,6 +53,10 @@ xmlns:rim="http://www.blackberry.com/ns/widgets"
         <clobbers target="CaptureError" />
     </js-module>
 
+    <js-module src="www/CaptureProgress.js" name="CaptureProgress">
+        <clobbers target="CaptureProgress" />
+    </js-module>
+
     <js-module src="www/MediaFileData.js" name="MediaFileData">
         <clobbers target="MediaFileData" />
     </js-module>

@@ -28,6 +28,9 @@
 #define kW3CMediaFormatDuration @"duration"
 #define kW3CMediaModeType @"type"
 
+#define PROGRESS_MEDIA_IMPORTING @"MEDIA_IMPORTING"
+#define PROGRESS_MEDIA_IMPORTED @"MEDIA_IMPORTED"
+
 @implementation NSBundle (PluginExtensions)
 
 + (NSBundle*) pluginBundle:(CDVPlugin*)plugin {
@@ -82,6 +85,26 @@
 {
     self.inUse = NO;
     self.isAnimated = YES;
+}
+
+- (void)onMediaImporting:(NSString*)callbackId count:(NSNumber*)count {
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    [result setObject:count forKey:@"data"];
+    [result setObject:PROGRESS_MEDIA_IMPORTING forKey:@"type"];
+
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+    [pluginResult setKeepCallbackAsBool:true];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId: callbackId];
+}
+
+- (void)onMediaImported:(NSString*)callbackId filePath:(NSString*)filePath {
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    [result setObject:filePath forKey:@"data"];
+    [result setObject:PROGRESS_MEDIA_IMPORTED forKey:@"type"];
+
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result];
+    [pluginResult setKeepCallbackAsBool:true];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId: callbackId];
 }
 
 - (void)captureAudio:(CDVInvokedUrlCommand*)command
@@ -182,6 +205,9 @@
  */
 - (CDVPluginResult*)processImage:(UIImage*)image type:(NSString*)mimeType forCallbackId:(NSString*)callbackId
 {
+    // progress event
+    [self onMediaImporting:callbackId count:[NSNumber numberWithInteger:1]];
+
     CDVPluginResult* result = nil;
 
     // save the image to photo album
@@ -222,6 +248,9 @@
 
         result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
     }
+
+    // progress event
+    [self onMediaImported:callbackId filePath:filePath];
 
     return result;
 }
@@ -319,6 +348,9 @@
 
 - (CDVPluginResult*)processVideo:(NSString*)moviePath forCallbackId:(NSString*)callbackId
 {
+    // progress event
+    [self onMediaImporting:callbackId count:[NSNumber numberWithInteger:1]];
+
     // save the movie to photo album (only avail as of iOS 3.1)
 
     /* don't need, it should automatically get saved
@@ -353,6 +385,9 @@
     // create MediaFile object
     NSDictionary* fileDict = [self getMediaDictionaryFromPath:filePath ofType:nil];
     NSArray* fileArray = [NSArray arrayWithObject:fileDict];
+
+    // progress event
+    [self onMediaImported:callbackId filePath:filePath];
 
     return [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
 }
@@ -1005,10 +1040,16 @@
 
     // generate success result
     if (flag) {
+        // progress event
+        [self.captureCommand onMediaImporting:callbackId count:[NSNumber numberWithInt:1]];
+
         NSString* filePath = [avRecorder.url path];
         // NSLog(@"filePath: %@", filePath);
         NSDictionary* fileDict = [captureCommand getMediaDictionaryFromPath:filePath ofType:@"audio/wav"];
         NSArray* fileArray = [NSArray arrayWithObject:fileDict];
+
+        // progress event
+        [self.captureCommand onMediaImported:callbackId filePath:filePath];
 
         self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:fileArray];
     } else {

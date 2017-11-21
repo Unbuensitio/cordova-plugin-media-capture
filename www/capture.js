@@ -32,6 +32,11 @@ var helpers = require('./helpers');
  */
 function _capture (type, successCallback, errorCallback, options) {
     var win = function (pluginResult) {
+        if (typeof options !== 'undefined' && typeof options.progress === 'function' && typeof result !== 'undefined' && typeof result.type !== 'undefined') {
+            options.progress(result);
+            return;
+        }
+
         successCallback(helpers.wrapMediaFiles(pluginResult));
     };
     exec(win, errorCallback, 'Capture', type, [options]);
