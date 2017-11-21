@@ -366,6 +366,15 @@ capturing a video clip, the `CaptureErrorCB` callback executes with a
 ### iOS Quirks
 
 - The __limit__ property is ignored.  Only one video is recorded per invocation.
+- iOS supports an additional __quality__ property, to allow capturing video at different qualities.
+  A value of `1` ( the default ) means high quality, a value of `0` means low quality (suitable for MMS messages), a value of `480` means 640x480, a value of `540` means 960x540 and a value of `720` means 1280x720.
+  See [here](https://developer.apple.com/documentation/uikit/uiimagepickercontrollerqualitytype) for more details.
+
+### Example ( iOS w/ quality )
+
+    // limit capture operation to 1 video clip of low quality
+    var options = { limit: 1, quality: 0 };
+    navigator.device.capture.captureVideo(captureSuccess, captureError, options);
 
 ### Android Quirks
 

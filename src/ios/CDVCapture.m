@@ -244,6 +244,7 @@
 
     NSNumber* duration = [options objectForKey:@"duration"];
     NSString* mediaType = nil;
+    NSNumber* quality = [options objectForKey:@"quality"];
 
     if ([UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
         // there is a camera, it is available, make sure it can do movies
@@ -286,7 +287,26 @@
         // iOS 4.0
         if ([pickerController respondsToSelector:@selector(cameraCaptureMode)]) {
             pickerController.cameraCaptureMode = UIImagePickerControllerCameraCaptureModeVideo;
-            // pickerController.videoQuality = UIImagePickerControllerQualityTypeHigh;
+            pickerController.videoQuality = UIImagePickerControllerQualityTypeHigh;
+            if ([mediaType isEqualToString:(NSString*)kUTTypeMovie] && quality) {
+                switch ([quality intValue]) {
+                    case 0:
+                        pickerController.videoQuality = UIImagePickerControllerQualityTypeLow;
+                        break;
+
+                    case 480:
+                        pickerController.videoQuality = UIImagePickerControllerQualityType640x480;
+                        break;
+
+                    case 540:
+                        pickerController.videoQuality = UIImagePickerControllerQualityTypeIFrame960x540;
+                        break;
+
+                    case 720:
+                        pickerController.videoQuality = UIImagePickerControllerQualityTypeIFrame1280x720;
+                        break;
+                }
+            }
             // pickerController.cameraDevice = UIImagePickerControllerCameraDeviceRear;
             // pickerController.cameraFlashMode = UIImagePickerControllerCameraFlashModeAuto;
         }
