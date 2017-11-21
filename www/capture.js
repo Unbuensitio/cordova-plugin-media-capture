@@ -84,4 +84,8 @@ Capture.prototype.captureVideo = function (successCallback, errorCallback, optio
     _capture('captureVideo', successCallback, errorCallback, options);
 };
 
+Capture.prototype.requestPermission = function(successCallback, errorCallback, options) {
+    exec(successCallback, errorCallback, 'Capture', 'requestPermission', [options]);
+}
+
 module.exports = new Capture();

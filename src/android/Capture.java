@@ -69,6 +69,8 @@ public class Capture extends CordovaPlugin {
     private static final int CAPTURE_AUDIO = 0;     // Constant for capture audio
     private static final int CAPTURE_IMAGE = 1;     // Constant for capture image
     private static final int CAPTURE_VIDEO = 2;     // Constant for capture video
+    private static final int REQUEST_PERMISSION = 99;
+
     private static final String LOG_TAG = "Capture";
 
     private static final int CAPTURE_INTERNAL_ERR = 0;
@@ -152,6 +154,21 @@ public class Capture extends CordovaPlugin {
         callbackContext.sendPluginResult(progressResult);
     }
 
+    private void requestPermission(Request req) {
+        boolean needCameraPermission = cameraPermissionInManifest && !PermissionHelper.hasPermission(this, Manifest.permission.CAMERA);
+        boolean needExternalStoragePermission = !PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+
+        if (needCameraPermission && needExternalStoragePermission) {
+            PermissionHelper.requestPermissions(this, req.requestCode, new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE});
+        } else if (needCameraPermission) {
+            PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.CAMERA);
+        } else if (needExternalStoragePermission) {
+            PermissionHelper.requestPermission(this, req.requestCode, Manifest.permission.READ_EXTERNAL_STORAGE);
+        } else {
+            pendingRequests.resolveWithSuccess(req);
+        }
+    }
+
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if (action.equals("getFormatData")) {
@@ -170,6 +187,9 @@ public class Capture extends CordovaPlugin {
         }
         else if (action.equals("captureVideo")) {
             this.captureVideo(pendingRequests.createRequest(CAPTURE_VIDEO, options, callbackContext));
+        }
+        else if (action.equals("requestPermission")) {
+            this.requestPermission(pendingRequests.createRequest(REQUEST_PERMISSION, options, callbackContext));
         }
         else {
             return false;
@@ -614,6 +634,9 @@ public class Capture extends CordovaPlugin {
             case CAPTURE_VIDEO:
                 this.captureVideo(req);
                 break;
+            case REQUEST_PERMISSION:
+                this.requestPermission(req);
+                break;
         }
     }
 
@@ -631,6 +654,11 @@ public class Capture extends CordovaPlugin {
             }
 
             if (success) {
+                if (req.action == REQUEST_PERMISSION) {
+                    pendingRequests.resolveWithSuccess(req);
+                    return;
+                }
+
                 executeRequest(req);
             } else {
                 pendingRequests.resolveWithFailure(req, createErrorObject(CAPTURE_PERMISSION_DENIED, "Permission denied."));
