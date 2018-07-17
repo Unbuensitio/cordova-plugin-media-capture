@@ -32,8 +32,8 @@ var helpers = require('./helpers');
  */
 function _capture (type, successCallback, errorCallback, options) {
     var win = function (pluginResult) {
-        if (typeof options !== 'undefined' && typeof options.progress === 'function' && typeof result !== 'undefined' && typeof result.type !== 'undefined') {
-            options.progress(result);
+        if (typeof options !== 'undefined' && typeof options.progress === 'function' && typeof pluginResult !== 'undefined' && typeof pluginResult.type !== 'undefined') {
+            options.progress(pluginResult);
             return;
         }
 
