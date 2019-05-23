@@ -377,13 +377,13 @@
 
     // save the movie to photo album (only avail as of iOS 3.1)
 
-    /* don't need, it should automatically get saved
+     // don't need, it should automatically get saved
      NSLog(@"can save %@: %d ?", moviePath, UIVideoAtPathIsCompatibleWithSavedPhotosAlbum(moviePath));
     if (&UIVideoAtPathIsCompatibleWithSavedPhotosAlbum != NULL && UIVideoAtPathIsCompatibleWithSavedPhotosAlbum(moviePath) == YES) {
         NSLog(@"try to save movie");
         UISaveVideoAtPathToSavedPhotosAlbum(moviePath, nil, nil, nil);
         NSLog(@"finished saving movie");
-    }*/
+    }
 
     // write to application directory and return URI
     NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
